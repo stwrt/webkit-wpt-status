@@ -1,1 +1,0 @@
-{"name":"deprecation-reporting","expectation":"import","counts":{"identical":2,"renamed":0,"modified":0,"missing":1,"notImported":0},"missing":{"total":1,"truncated":false,"items":["deprecation-reporting/__dir__.ini"]},"modified":{"total":0,"truncated":false,"items":[]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

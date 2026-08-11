@@ -1,1 +1,0 @@
-{"name":"cors","expectation":"import","counts":{"identical":43,"renamed":0,"modified":2,"missing":0,"notImported":0},"missing":{"total":0,"truncated":false,"items":[]},"modified":{"total":2,"truncated":false,"items":["cors/WEB_FEATURES.yml","cors/cors-safelisted-request-header.any.js"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

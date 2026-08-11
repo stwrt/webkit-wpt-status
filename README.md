@@ -92,7 +92,9 @@ To refresh on demand: `gh workflow run refresh.yml`, or run `npm run collect` lo
 src/collect/    the comparison: repo mirrors, expectations, bucketing, CLI
 src/server/     node:http server — JSON API plus the built frontend, zero runtime deps
 web/            Vite + React + TypeScript + Tailwind + shadcn/ui
-data/           generated snapshot (report.json, meta.json, dirs/<name>.json)
+data/           the served snapshot: report.json (top-level rows + totals),
+                tree.json (counts for every directory at every depth),
+                files.json (sorted missing/modified/WebKit-only paths)
 .cache/         the two git mirrors
 ```
 
@@ -101,10 +103,15 @@ data/           generated snapshot (report.json, meta.json, dirs/<name>.json)
 | Endpoint | Returns |
 | --- | --- |
 | `GET /api/report` | Summary totals plus a row per top-level directory. |
-| `GET /api/dirs/:name` | File lists for one directory (missing / modified / WebKit only). |
+| `GET /api/dirs/<path>` | One directory at **any depth** — its counts, its immediate subdirectories with theirs, and the files beneath it. |
 | `GET /healthz` | Liveness plus the snapshot timestamp. |
 
-Both JSON endpoints are gzipped, ETagged and CORS-open, so the data is reusable elsewhere.
+Counts roll up into every ancestor, so `/api/dirs/css/css-grid` and
+`/api/dirs/css/css-grid/grid-lanes` are as real as `/api/dirs/css` — about 9,000 directories in
+all. File lists are stored once as three sorted arrays and sliced by prefix with a binary search,
+rather than duplicated per directory.
+
+The JSON endpoints are gzipped, ETagged and CORS-open, so the data is reusable elsewhere.
 
 ## Licence
 

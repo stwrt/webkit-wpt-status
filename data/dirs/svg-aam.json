@@ -1,1 +1,0 @@
-{"name":"svg-aam","expectation":"import","counts":{"identical":6,"renamed":0,"modified":2,"missing":0,"notImported":0},"missing":{"total":0,"truncated":false,"items":[]},"modified":{"total":2,"truncated":false,"items":["svg-aam/role/roles-generic.html","svg-aam/role/roles.tentative.html"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

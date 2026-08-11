@@ -1,1 +1,0 @@
-{"name":"apng","expectation":"import","counts":{"identical":2,"renamed":1,"modified":1,"missing":0,"notImported":0},"missing":{"total":0,"truncated":false,"items":[]},"modified":{"total":1,"truncated":false,"items":["apng/animated-png-timeout.html"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

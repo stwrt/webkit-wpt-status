@@ -4,7 +4,6 @@ import path from 'node:path';
 import {
   dataDir,
   IMPORT_EXPECTATIONS_PATH,
-  MAX_FILES_PER_BUCKET,
   UPSTREAM,
   WEBKIT,
   WEBKIT_WPT_PREFIX,
@@ -17,17 +16,35 @@ function log(message) {
   process.stderr.write(`[collect] ${message}\n`);
 }
 
-/** Directory names come from git and are used as filenames; keep them boring. */
-function isSafeDirName(name) {
-  return /^[A-Za-z0-9._-]+$/.test(name) && name !== '.' && name !== '..';
-}
+/**
+ * Directory counts, flattened to arrays. There are ~6,700 directories across every
+ * depth, and object keys repeated 6,700 times cost far more than the numbers do.
+ */
+function packTree(tree) {
+  const legend = [];
+  const counts = {};
 
-function capped(list) {
-  return {
-    total: list.length,
-    truncated: list.length > MAX_FILES_PER_BUCKET,
-    items: list.slice(0, MAX_FILES_PER_BUCKET),
-  };
+  for (const [dirPath, node] of tree) {
+    let expectation = legend.indexOf(node.expectation);
+    if (expectation === -1) expectation = legend.push(node.expectation) - 1;
+
+    counts[dirPath] = [
+      node.counts.identical,
+      node.counts.renamed,
+      node.counts.modified,
+      node.counts.missing,
+      node.counts.notImported,
+      node.tests.identical,
+      node.tests.renamed,
+      node.tests.modified,
+      node.tests.missing,
+      node.tests.notImported,
+      node.webkitExtra,
+      expectation,
+    ];
+  }
+
+  return { expectationLegend: legend, counts };
 }
 
 export async function collect() {
@@ -43,10 +60,11 @@ export async function collect() {
   log(`upstream files: ${upstreamFiles.size}, WebKit files: ${webkitFiles.size}`);
 
   const expectations = parseImportExpectations(expectationsJson);
-  const { directories, totals } = compareTrees(upstreamFiles, webkitFiles, expectations);
+  const { tree, directories, files, totals } = compareTrees(upstreamFiles, webkitFiles, expectations);
   log(
     `${totals.imported} files in scope, ${totals.syncPercent}% in sync, ` +
-      `${totals.counts.missing} missing, ${totals.counts.modified} modified`,
+      `${totals.counts.missing} missing, ${totals.counts.modified} modified, ` +
+      `${tree.size} directories`,
   );
 
   const meta = {
@@ -57,36 +75,20 @@ export async function collect() {
     expectations: { root: expectations.root, rules: expectations.rules.size },
   };
 
-  const report = {
-    ...meta,
-    totals,
-    directories: directories.map(({ files, ...dir }) => ({
-      ...dir,
-      hasDetail: isSafeDirName(dir.name),
-    })),
-  };
-
+  await fs.mkdir(dataDir, { recursive: true });
+  // dirs/ was the old per-top-level-directory layout, replaced by tree + files.
   await fs.rm(path.join(dataDir, 'dirs'), { recursive: true, force: true });
-  await fs.mkdir(path.join(dataDir, 'dirs'), { recursive: true });
 
-  await Promise.all(
-    directories.filter((dir) => isSafeDirName(dir.name)).map((dir) =>
-      writeJson(path.join(dataDir, 'dirs', `${dir.name}.json`), {
-        name: dir.name,
-        expectation: dir.expectation,
-        counts: dir.counts,
-        missing: capped(dir.files.missing),
-        modified: capped(dir.files.modified),
-        webkitExtra: capped(dir.files.webkitExtra),
-      }),
-    ),
-  );
-
-  await writeJson(path.join(dataDir, 'report.json'), report);
+  await writeJson(path.join(dataDir, 'report.json'), { ...meta, totals, directories });
+  await writeJson(path.join(dataDir, 'tree.json'), {
+    generatedAt: meta.generatedAt,
+    ...packTree(tree),
+  });
+  await writeJson(path.join(dataDir, 'files.json'), { generatedAt: meta.generatedAt, ...files });
   await writeJson(path.join(dataDir, 'meta.json'), meta);
 
   log(`wrote data/ in ${Date.now() - started}ms`);
-  return report;
+  return { meta, totals };
 }
 
 function pickRepo({ name, url, ref, sha, committedAt, subject }) {

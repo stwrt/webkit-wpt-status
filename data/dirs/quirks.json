@@ -1,1 +1,0 @@
-{"name":"quirks","expectation":"import","counts":{"identical":71,"renamed":0,"modified":0,"missing":1,"notImported":0},"missing":{"total":1,"truncated":false,"items":["quirks/active-and-hover-manual.html"]},"modified":{"total":0,"truncated":false,"items":[]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

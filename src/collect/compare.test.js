@@ -11,8 +11,6 @@ const expectations = parseImportExpectations({
   'web-platform-tests/webdriver': 'skip',
 });
 
-const byName = (result, name) => result.directories.find((d) => d.name === name);
-
 test('buckets files by content identity', () => {
   const upstream = new Map([
     ['dom/same.html', 'aaa'],
@@ -25,23 +23,65 @@ test('buckets files by content identity', () => {
     ['dom/changed.html', 'bbb-webkit'],
   ]);
 
-  const { directories, totals } = compareTrees(upstream, webkit, expectations);
-  const dom = byName({ directories }, 'dom');
+  const { tree, files, totals } = compareTrees(upstream, webkit, expectations);
 
-  assert.deepEqual(dom.counts, {
+  assert.deepEqual(tree.get('dom').counts, {
     identical: 1,
     renamed: 0,
     modified: 1,
     missing: 1,
     notImported: 0,
   });
-  assert.deepEqual(dom.files.missing, ['dom/gone.html']);
-  assert.deepEqual(dom.files.modified, ['dom/changed.html']);
+  assert.deepEqual(files.missing, ['dom/gone.html']);
+  assert.deepEqual(files.modified, ['dom/changed.html']);
 
-  assert.equal(byName({ directories }, 'webdriver').counts.notImported, 1);
+  assert.equal(tree.get('webdriver').counts.notImported, 1);
   assert.equal(totals.counts.notImported, 1);
   assert.equal(totals.imported, 3, 'skipped files are outside the imported scope');
   assert.equal(totals.syncPercent, 33.3);
+});
+
+test('counts roll up into every ancestor directory', () => {
+  const upstream = new Map([
+    ['dom/nodes/a.html', 'aaa'],
+    ['dom/nodes/deep/b.html', 'bbb'],
+    ['dom/events/c.html', 'ccc'],
+  ]);
+  const webkit = new Map([['dom/nodes/a.html', 'aaa']]);
+
+  const { tree } = compareTrees(upstream, webkit, expectations);
+
+  assert.deepEqual([...tree.keys()].sort(), [
+    'dom',
+    'dom/events',
+    'dom/nodes',
+    'dom/nodes/deep',
+  ]);
+  assert.equal(tree.get('dom').upstreamFiles, 3);
+  assert.equal(tree.get('dom').counts.missing, 2);
+  assert.equal(tree.get('dom/nodes').counts.identical, 1);
+  assert.equal(tree.get('dom/nodes').counts.missing, 1, 'includes the nested deep/ file');
+  assert.equal(tree.get('dom/nodes/deep').counts.missing, 1);
+  assert.equal(tree.get('dom/events').counts.missing, 1);
+  assert.equal(tree.get('dom/nodes').syncPercent, 50);
+});
+
+test('every directory carries its own resolved expectation', () => {
+  const nested = parseImportExpectations({
+    'web-platform-tests': 'skip-new-directories',
+    'web-platform-tests/css': 'skip-new-directories',
+    'web-platform-tests/css/css-grid': 'import',
+  });
+  const upstream = new Map([
+    ['css/css-grid/a.html', 'aaa'],
+    ['css/css-fonts/b.html', 'bbb'],
+  ]);
+
+  const { tree } = compareTrees(upstream, new Map(), nested);
+  assert.equal(tree.get('css/css-grid').expectation, 'import');
+  assert.equal(tree.get('css/css-fonts').expectation, 'skip-new-directories');
+  assert.equal(tree.get('css/css-grid').counts.missing, 1);
+  assert.equal(tree.get('css/css-fonts').counts.notImported, 1);
 });
 
 test('recognises a reference file WebKit renamed on import', () => {
@@ -55,7 +95,8 @@ test('recognises a reference file WebKit renamed on import', () => {
     ['dom/test-expected.html', 'bbb'],
   ]);
 
-  const dom = byName(compareTrees(upstream, webkit, expectations), 'dom');
+  const { tree } = compareTrees(upstream, webkit, expectations);
+  const dom = tree.get('dom');
   assert.equal(dom.counts.renamed, 1);
   assert.equal(dom.counts.missing, 0);
   assert.equal(dom.webkitExtra, 0, 'the renamed copy is not an extra file');
@@ -66,7 +107,7 @@ test('a matching blob in a different directory is not treated as a rename', () =
   const upstream = new Map([['dom/only.html', 'aaa']]);
   const webkit = new Map([['other/only.html', 'aaa']]);
 
-  const dom = byName(compareTrees(upstream, webkit, expectations), 'dom');
+  const dom = compareTrees(upstream, webkit, expectations).tree.get('dom');
   assert.equal(dom.counts.missing, 1);
   assert.equal(dom.counts.renamed, 0);
 });
@@ -79,12 +120,23 @@ test('separates import artifacts from genuine WebKit-only files', () => {
     ['dom/api.any.worker.html', 'gen2'], // ditto
     ['dom/api-expected.txt', 'base'], // WebKit baseline
     ['dom/w3c-import.log', 'meta'], // import metadata
-    ['dom/deleted-upstream.html', 'old'], // the real signal
+    ['dom/sub/deleted-upstream.html', 'old'], // the real signal
   ]);
 
-  const dom = byName(compareTrees(upstream, webkit, expectations), 'dom');
-  assert.equal(dom.webkitExtra, 1);
-  assert.deepEqual(dom.files.webkitExtra, ['dom/deleted-upstream.html']);
+  const { tree, files } = compareTrees(upstream, webkit, expectations);
+  assert.equal(tree.get('dom').webkitExtra, 1);
+  assert.equal(tree.get('dom/sub').webkitExtra, 1, 'extras roll up too');
+  assert.deepEqual(files.webkitExtra, ['dom/sub/deleted-upstream.html']);
+});
+
+test('file lists come back sorted, for prefix lookups', () => {
+  const upstream = new Map([
+    ['dom/z.html', 'a'],
+    ['dom/a.html', 'b'],
+    ['dom/m/n.html', 'c'],
+  ]);
+  const { files } = compareTrees(upstream, new Map(), expectations);
+  assert.deepEqual(files.missing, ['dom/a.html', 'dom/m/n.html', 'dom/z.html']);
 });
 
 test('root-level upstream files are ignored', () => {
@@ -105,7 +157,7 @@ test('totals count directories with anything in scope as imported', () => {
     ['webdriver/skipped.html', 'bbb'],
   ]);
   const { totals } = compareTrees(upstream, new Map(), expectations);
-  assert.equal(totals.directories, 2);
+  assert.equal(totals.directories, 2, 'top-level directories only');
   assert.equal(totals.directoriesImported, 1);
 });
 

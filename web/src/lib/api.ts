@@ -23,7 +23,6 @@ export interface DirectorySummary {
   imported: number;
   inSync: number;
   syncPercent: number | null;
-  hasDetail: boolean;
 }
 
 export interface Totals {
@@ -57,13 +56,35 @@ export interface FileList {
   items: string[];
 }
 
-export interface DirectoryDetail {
+/** A subdirectory of the directory being viewed. */
+export interface DirectoryChild {
+  path: string;
   name: string;
   expectation: string;
+  hasChildren: boolean;
   counts: Counts;
-  missing: FileList;
-  modified: FileList;
-  webkitExtra: FileList;
+  tests: Counts;
+  webkitExtra: number;
+  imported: number;
+  inSync: number;
+  syncPercent: number | null;
+}
+
+export interface DirectoryDetail {
+  path: string;
+  expectation: string;
+  counts: Counts;
+  tests: Counts;
+  webkitExtra: number;
+  imported: number;
+  inSync: number;
+  syncPercent: number | null;
+  children: DirectoryChild[];
+  lists: {
+    missing: FileList;
+    modified: FileList;
+    webkitExtra: FileList;
+  };
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -80,8 +101,9 @@ async function getJson<T>(url: string): Promise<T> {
 
 export const fetchReport = () => getJson<Report>('/api/report');
 
-export const fetchDirectory = (name: string) =>
-  getJson<DirectoryDetail>(`/api/dirs/${encodeURIComponent(name)}`);
+/** `dirPath` may be any depth, e.g. "css/css-grid" — slashes stay as separators. */
+export const fetchDirectory = (dirPath: string) =>
+  getJson<DirectoryDetail>(`/api/dirs/${dirPath.split('/').map(encodeURIComponent).join('/')}`);
 
 const UPSTREAM_BLOB = 'https://github.com/web-platform-tests/wpt/blob/master';
 const WEBKIT_TREE =

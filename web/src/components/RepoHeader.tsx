@@ -3,6 +3,7 @@ import { GitCommitHorizontal, Moon, Sun } from 'lucide-react';
 import type { Report } from '@/lib/api';
 import { formatDate, formatRelative } from '@/lib/format';
 import { Button } from '@/components/ui/button';
+import { MojaveBadge } from '@/components/MojaveBadge';
 import { useTheme } from '@/hooks/useTheme';
 
 function RepoRef({ label, name, url, sha, committedAt }: {
@@ -41,7 +42,8 @@ export function RepoHeader({ report }: { report: Report }) {
     <header className="border-border border-b">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight">WebKit WPT Status</h1>
+          <MojaveBadge />
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight">WebKit WPT Status</h1>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
             WebKit vendors a copy of{' '}
             <a

@@ -11,7 +11,6 @@ import {
 import { ArrowDown, ArrowUp, ChevronRight, Search } from 'lucide-react';
 
 import type { Counts, Report } from '@/lib/api';
-import { webkitUrl } from '@/lib/api';
 import type { Metric } from '@/lib/metric';
 import { metricCounts, metricScope, metricSyncPercent } from '@/lib/metric';
 import { formatNumber, formatPercent } from '@/lib/format';
@@ -267,11 +266,7 @@ export function DirectoryTable({ report, metric }: { report: Report; metric: Met
                 isOpen && (
                   <TableRow key={`${row.id}-detail`} className="hover:bg-transparent">
                     <TableCell colSpan={row.getVisibleCells().length} className="bg-muted/40 p-0">
-                      <DirectoryDetail
-                        name={row.original.name}
-                        webkitTreeUrl={webkitUrl(row.original.name)}
-                        metric={metric}
-                      />
+                      <DirectoryDetail root={row.original.name} metric={metric} />
                     </TableCell>
                   </TableRow>
                 ),

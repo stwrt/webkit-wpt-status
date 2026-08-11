@@ -123,8 +123,9 @@ async function handle(req, res) {
   }
 
   if (pathname.startsWith('/api/dirs/')) {
-    const name = pathname.slice('/api/dirs/'.length);
-    const detail = await store.detail(decodeURIComponent(name));
+    // The rest of the path is a directory at any depth, e.g. /api/dirs/css/css-grid.
+    const dirPath = decodeURIComponent(pathname.slice('/api/dirs/'.length)).replace(/\/+$/, '');
+    const detail = await store.detail(dirPath);
     if (!detail) return sendError(res, 404, 'Unknown directory');
     return sendJsonPayload(req, res, detail, { maxAge: 300 });
   }

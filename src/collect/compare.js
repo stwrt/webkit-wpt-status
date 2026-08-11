@@ -2,26 +2,33 @@ import { importArtifactReason, isTestFile } from './classify.js';
 
 export const BUCKETS = ['identical', 'renamed', 'modified', 'missing', 'notImported'];
 
-function topLevel(filePath) {
-  const slash = filePath.indexOf('/');
-  return slash === -1 ? filePath : filePath.slice(0, slash);
-}
+/** Buckets whose file lists are worth keeping; `identical` would be 70k paths of nothing. */
+export const LISTED_BUCKETS = ['missing', 'modified', 'webkitExtra'];
 
-function emptyDirectory(name) {
+function emptyNode() {
   return {
-    name,
     upstreamFiles: 0,
     upstreamTests: 0,
     counts: { identical: 0, renamed: 0, modified: 0, missing: 0, notImported: 0 },
     tests: { identical: 0, renamed: 0, modified: 0, missing: 0, notImported: 0 },
     webkitExtra: 0,
-    files: { missing: [], modified: [], webkitExtra: [] },
   };
+}
+
+function finish(node) {
+  node.imported =
+    node.counts.identical + node.counts.renamed + node.counts.modified + node.counts.missing;
+  node.inSync = node.counts.identical + node.counts.renamed;
+  node.syncPercent = node.imported === 0 ? null : round1((100 * node.inSync) / node.imported);
+  return node;
 }
 
 /**
  * Compare upstream WPT against WebKit's vendored copy, file by file, using git
  * blob SHAs as content identity.
+ *
+ * Counts are accumulated into every ancestor directory, not just the top level,
+ * so a directory like css/css-grid can be examined on its own.
  *
  * @param {Map<string,string>} upstreamFiles path -> blob SHA, upstream wpt
  * @param {Map<string,string>} webkitFiles   path -> blob SHA, WebKit's copy (prefix stripped)
@@ -33,23 +40,36 @@ export function compareTrees(upstreamFiles, webkitFiles, expectations) {
   // that: same blob, same directory, different path.
   const webkitShasByDir = new Map();
   for (const [filePath, sha] of webkitFiles) {
-    const dir = topLevel(filePath);
+    const dir = filePath.slice(0, filePath.indexOf('/'));
     let shas = webkitShasByDir.get(dir);
     if (!shas) webkitShasByDir.set(dir, (shas = new Set()));
     shas.add(sha);
   }
 
-  const directories = new Map();
-  const directoryFor = (name) => {
-    let dir = directories.get(name);
-    if (!dir) directories.set(name, (dir = emptyDirectory(name)));
-    return dir;
-  };
+  const nodes = new Map();
+  const files = { missing: [], modified: [], webkitExtra: [] };
+
+  /** Fold one file into every directory that contains it. */
+  function record(filePath, bucket, isTest, isUpstream) {
+    const parts = filePath.split('/');
+    for (let depth = 1; depth < parts.length; depth++) {
+      const dir = parts.slice(0, depth).join('/');
+      let node = nodes.get(dir);
+      if (!node) nodes.set(dir, (node = emptyNode()));
+
+      if (isUpstream) {
+        node.upstreamFiles++;
+        if (isTest) node.upstreamTests++;
+        node.counts[bucket]++;
+        if (isTest) node.tests[bucket]++;
+      } else {
+        node.webkitExtra++;
+      }
+    }
+  }
 
   for (const [filePath, sha] of upstreamFiles) {
     if (!filePath.includes('/')) continue; // root-level files (LICENSE, README, ...) aren't tests
-    const dir = directoryFor(topLevel(filePath));
-    const test = isTestFile(filePath);
 
     let bucket;
     if (!expectations.isImported(filePath)) {
@@ -58,15 +78,13 @@ export function compareTrees(upstreamFiles, webkitFiles, expectations) {
       const webkitSha = webkitFiles.get(filePath);
       if (webkitSha === sha) bucket = 'identical';
       else if (webkitSha !== undefined) bucket = 'modified';
-      else if (webkitShasByDir.get(dir.name)?.has(sha)) bucket = 'renamed';
+      else if (webkitShasByDir.get(filePath.slice(0, filePath.indexOf('/')))?.has(sha))
+        bucket = 'renamed';
       else bucket = 'missing';
     }
 
-    dir.upstreamFiles++;
-    if (test) dir.upstreamTests++;
-    dir.counts[bucket]++;
-    if (test) dir.tests[bucket]++;
-    if (bucket === 'missing' || bucket === 'modified') dir.files[bucket].push(filePath);
+    record(filePath, bucket, isTestFile(filePath), true);
+    if (bucket === 'missing' || bucket === 'modified') files[bucket].push(filePath);
   }
 
   // Files WebKit has that upstream doesn't, minus everything the import process
@@ -74,23 +92,26 @@ export function compareTrees(upstreamFiles, webkitFiles, expectations) {
   for (const filePath of webkitFiles.keys()) {
     if (upstreamFiles.has(filePath)) continue;
     if (importArtifactReason(filePath, upstreamFiles)) continue;
-    const dir = directoryFor(topLevel(filePath));
-    dir.webkitExtra++;
-    dir.files.webkitExtra.push(filePath);
+    record(filePath, null, false, false);
+    files.webkitExtra.push(filePath);
   }
 
-  for (const dir of directories.values()) {
-    dir.expectation = expectations.expectationFor(dir.name);
-    dir.imported = dir.counts.identical + dir.counts.renamed + dir.counts.modified + dir.counts.missing;
-    dir.inSync = dir.counts.identical + dir.counts.renamed;
-    dir.syncPercent = dir.imported === 0 ? null : round1((100 * dir.inSync) / dir.imported);
-    for (const list of Object.values(dir.files)) list.sort();
+  // Sorted so the server can answer "everything under this prefix" with a binary
+  // search instead of scanning ~19k paths per request.
+  for (const list of Object.values(files)) list.sort();
+
+  const tree = new Map();
+  for (const [path, node] of nodes) {
+    node.expectation = expectations.expectationFor(path);
+    tree.set(path, finish(node));
   }
 
-  return {
-    directories: [...directories.values()].sort((a, b) => a.name.localeCompare(b.name)),
-    totals: summarise([...directories.values()]),
-  };
+  const directories = [...tree]
+    .filter(([path]) => !path.includes('/'))
+    .map(([name, node]) => ({ name, ...node }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return { tree, directories, files, totals: summarise(directories) };
 }
 
 function summarise(directories) {
@@ -115,16 +136,15 @@ function summarise(directories) {
     }
   }
 
-  totals.imported =
-    totals.counts.identical + totals.counts.renamed + totals.counts.modified + totals.counts.missing;
-  totals.inSync = totals.counts.identical + totals.counts.renamed;
-  totals.syncPercent = totals.imported === 0 ? null : round1((100 * totals.inSync) / totals.imported);
+  finish(totals);
 
   const importedTests =
     totals.tests.identical + totals.tests.renamed + totals.tests.modified + totals.tests.missing;
   totals.importedTests = importedTests;
   totals.testSyncPercent =
-    importedTests === 0 ? null : round1((100 * (totals.tests.identical + totals.tests.renamed)) / importedTests);
+    importedTests === 0
+      ? null
+      : round1((100 * (totals.tests.identical + totals.tests.renamed)) / importedTests);
 
   return totals;
 }

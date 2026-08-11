@@ -1,1 +1,0 @@
-{"name":"resources","expectation":"import","counts":{"identical":140,"renamed":0,"modified":1,"missing":1,"notImported":29},"missing":{"total":1,"truncated":false,"items":["resources/testharnessreport.js"]},"modified":{"total":1,"truncated":false,"items":["resources/web-extensions-helper.js"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}
