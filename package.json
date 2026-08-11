@@ -1,0 +1,27 @@
+{
+  "name": "webkit-wpt-status",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tracks how far WebKit's imported web-platform-tests have drifted from upstream WPT.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "collect": "node src/collect/index.js",
+    "start": "node src/server/index.js",
+    "build": "npm run collect:soft && npm run build:web",
+    "build:web": "npm run build --workspace web",
+    "//collect:soft": "Bakes a snapshot into the deployed image so the service has data the moment it boots, even if the runtime has no git. A failure here is survivable: the server retries on its refresh schedule.",
+    "collect:soft": "node src/collect/index.js || echo '[build] collect failed; the server will retry at runtime'",
+    "dev": "npm run dev --workspace web",
+    "test": "node --test src/collect/*.test.js"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

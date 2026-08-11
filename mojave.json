@@ -1,0 +1,7 @@
+{
+  "kind": "service",
+  "start": "npm start",
+  "port": 8080,
+  "vcpus": 1,
+  "memMiB": 1024
+}

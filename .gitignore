@@ -1,0 +1,6 @@
+node_modules/
+.cache/
+data/
+web/dist/
+*.log
+.DS_Store
