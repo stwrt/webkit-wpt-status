@@ -16,6 +16,21 @@ export function metricScope(row: { counts: Counts; tests: Counts }, metric: Metr
   return counts.identical + counts.renamed + counts.modified + counts.missing;
 }
 
+/**
+ * Share of the import scope WebKit has at all, however the file differs. This
+ * leads over sync because most modified files differ by a line or two, so
+ * counting only byte-identical copies reads as a hole where there is a test.
+ */
+export function metricCoverage(
+  row: { counts: Counts; tests: Counts },
+  metric: Metric,
+): number | null {
+  const counts = metricCounts(row, metric);
+  const scope = metricScope(row, metric);
+  if (scope === 0) return null;
+  return Math.round((1000 * (counts.identical + counts.renamed + counts.modified)) / scope) / 10;
+}
+
 export function metricSyncPercent(
   row: { counts: Counts; tests: Counts },
   metric: Metric,

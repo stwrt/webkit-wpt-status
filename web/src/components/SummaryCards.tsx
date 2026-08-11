@@ -1,6 +1,6 @@
 import type { Report } from '@/lib/api';
 import type { Metric } from '@/lib/metric';
-import { metricCounts, metricScope, metricSyncPercent } from '@/lib/metric';
+import { metricCounts, metricCoverage, metricScope, metricSyncPercent } from '@/lib/metric';
 import { formatNumber, formatPercent, formatRelative } from '@/lib/format';
 import { BucketBar, BucketLegend } from '@/components/BucketBar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,14 +28,18 @@ export function SummaryCards({ report, metric }: { report: Report; metric: Metri
       <Card className="lg:col-span-1">
         <CardContent className="flex h-full flex-col justify-between gap-4">
           <div>
-            <p className="text-muted-foreground text-xs">In sync with upstream</p>
+            <p className="text-muted-foreground text-xs">Upstream {noun} WebKit has</p>
             {/* The one hero figure on the page. */}
             <p className="mt-1 text-5xl font-semibold tracking-tight tabular-nums">
-              {formatPercent(metricSyncPercent(totals, metric))}
+              {formatPercent(metricCoverage(totals, metric))}
             </p>
             <p className="text-muted-foreground mt-2 text-sm">
-              {formatNumber(counts.identical + counts.renamed)} of {formatNumber(scope)} imported{' '}
-              {noun} are byte-for-byte identical to upstream.
+              {formatNumber(counts.identical + counts.renamed + counts.modified)} of{' '}
+              {formatNumber(scope)} {noun} WebKit imports exist in its tree.
+            </p>
+            <p className="text-muted-foreground mt-2 text-sm">
+              {formatPercent(metricSyncPercent(totals, metric))} are byte-for-byte identical to
+              upstream. The rest are there but differ, usually by only a line or two.
             </p>
           </div>
           <div className="space-y-3">
@@ -52,9 +56,9 @@ export function SummaryCards({ report, metric }: { report: Report; metric: Metri
           detail={`Upstream has them; WebKit's copy doesn't`}
         />
         <StatTile
-          label={`Modified ${noun}`}
+          label={`Not resynced ${noun}`}
           value={formatNumber(counts.modified)}
-          detail="Present in both, contents differ"
+          detail="Present in both, usually a line or two apart"
         />
         <StatTile
           label="Directories imported"

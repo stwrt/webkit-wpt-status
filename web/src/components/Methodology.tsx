@@ -42,10 +42,20 @@ export function Methodology({ report }: { report: Report }) {
           usually a test upstream has since deleted or moved.
         </p>
         <p className="text-foreground/80">
-          <strong className="font-medium">One caveat worth knowing.</strong> WebKit also rewrites
-          some test files during import — that's what the{' '}
+          <strong className="font-medium">Why coverage leads, and what it hides.</strong>{' '}
+          <em>Coverage</em> is the share of the import scope WebKit has a copy of at all —
+          identical, renamed, or differing. <em>In sync</em> is the stricter share that is
+          byte-for-byte identical. Coverage leads because most differences are trivial: across a
+          sample of 40 modified test files, 73% differed from upstream by one or two lines. The
+          whole <code className="font-mono text-xs">compression</code> directory is 0% in sync
+          because upstream changed one <code className="font-mono text-xs">// META:</code> header
+          line that WebKit hasn't picked up, which says nothing about whether those tests are
+          there. Leading with in-sync would read as a hole where there is a test.
+        </p>
+        <p className="text-foreground/80">
+          WebKit also rewrites some test files during import — that's what the{' '}
           <code className="font-mono text-xs">import-no-rewrite</code> opt-out exists for. So{' '}
-          <em>modified</em> mixes deliberate local changes with genuinely stale copies, and it
+          <em>not resynced</em> mixes deliberate local edits with genuinely stale copies, and it
           can't tell you which is which. <em>Missing</em> is the number to trust.
         </p>
         <p className="text-xs">

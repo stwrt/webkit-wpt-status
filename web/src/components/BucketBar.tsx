@@ -4,8 +4,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * The bar shows composition *within the imported scope*. Not-imported files are a
- * different question (coverage, not drift) and would swamp directories like css,
- * so they get their own column instead of a fifth segment.
+ * different question — what WebKit chose to vendor, not how current it is — and
+ * would swamp directories like css, so they get their own column instead of a
+ * fifth segment.
  */
 export const BAR_BUCKETS: Bucket[] = ['identical', 'renamed', 'modified', 'missing'];
 

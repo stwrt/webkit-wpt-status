@@ -12,7 +12,7 @@ import { ArrowDown, ArrowUp, ChevronRight, Search } from 'lucide-react';
 
 import type { Counts, Report } from '@/lib/api';
 import type { Metric } from '@/lib/metric';
-import { metricCounts, metricScope, metricSyncPercent } from '@/lib/metric';
+import { metricCounts, metricCoverage, metricScope } from '@/lib/metric';
 import { formatNumber, formatPercent } from '@/lib/format';
 import { BucketBar } from '@/components/BucketBar';
 import { DirectoryDetail } from '@/components/DirectoryDetail';
@@ -39,7 +39,7 @@ interface Row {
   expectation: string;
   counts: Counts;
   scope: number;
-  syncPercent: number | null;
+  coverage: number | null;
   webkitExtra: number;
 }
 
@@ -109,9 +109,9 @@ const columns: ColumnDef<Row>[] = [
     cell: ({ row }) => <ExpectationBadge expectation={row.original.expectation} />,
   },
   {
-    id: 'sync',
-    header: 'In sync',
-    accessorFn: (row) => row.syncPercent ?? -1,
+    id: 'coverage',
+    header: () => <span title="Upstream files WebKit has, whether or not they match">Coverage</span>,
+    accessorFn: (row) => row.coverage ?? -1,
     sortDescFirst: false,
     cell: ({ row }) => {
       if (row.original.scope === 0) {
@@ -121,7 +121,7 @@ const columns: ColumnDef<Row>[] = [
         <div className="flex min-w-40 items-center gap-3">
           <BucketBar counts={row.original.counts} className="min-w-24 flex-1" />
           <span className="w-12 shrink-0 text-right text-sm tabular-nums">
-            {formatPercent(row.original.syncPercent)}
+            {formatPercent(row.original.coverage)}
           </span>
         </div>
       );
@@ -135,9 +135,9 @@ const columns: ColumnDef<Row>[] = [
   ),
   numericColumn(
     'modified',
-    'Modified',
+    'Not resynced',
     (row) => row.counts.modified,
-    'Present in both but the contents differ',
+    'Present in both but the contents differ, often by a single line',
   ),
   numericColumn(
     'notImported',
@@ -165,7 +165,7 @@ export function DirectoryTable({ report, metric }: { report: Report; metric: Met
         expectation: directory.expectation,
         counts: metricCounts(directory, metric),
         scope: metricScope(directory, metric),
-        syncPercent: metricSyncPercent(directory, metric),
+        coverage: metricCoverage(directory, metric),
         webkitExtra: directory.webkitExtra,
       })),
     [report, metric],

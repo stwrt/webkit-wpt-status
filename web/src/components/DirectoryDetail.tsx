@@ -10,7 +10,7 @@ import {
   type FileList,
 } from '@/lib/api';
 import type { Metric } from '@/lib/metric';
-import { metricCounts, metricScope, metricSyncPercent } from '@/lib/metric';
+import { metricCounts, metricCoverage, metricScope } from '@/lib/metric';
 import { formatNumber, formatPercent } from '@/lib/format';
 import { useAsync } from '@/hooks/useAsync';
 import { BucketBar } from '@/components/BucketBar';
@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 const EMPTY_MESSAGES: Record<string, string> = {
   missing: 'Nothing missing — WebKit has every upstream file here.',
-  modified: 'No local modifications.',
+  modified: 'Nothing stale — every file here matches upstream byte for byte.',
   webkitExtra: 'No extra files beyond what the import process generates.',
 };
 
@@ -119,7 +119,7 @@ function ChildRow({
         <span className="hidden items-center gap-2 sm:flex">
           <BucketBar counts={counts} className="h-1.5 flex-1" />
           <span className="w-11 shrink-0 text-right text-xs tabular-nums">
-            {formatPercent(metricSyncPercent(child, metric))}
+            {formatPercent(metricCoverage(child, metric))}
           </span>
         </span>
       )}
@@ -130,7 +130,7 @@ function ChildRow({
         </span>
         <span className="text-muted-foreground/40 mx-2">·</span>
         <span className={cn(counts.modified === 0 && 'text-muted-foreground/50')}>
-          {formatNumber(counts.modified)} modified
+          {formatNumber(counts.modified)} not resynced
         </span>
       </span>
     </button>
@@ -176,7 +176,7 @@ export function DirectoryDetail({
   const children = data.children ?? [];
   const tabs = [
     { key: 'missing', label: 'Missing', list: lists.missing ?? EMPTY_LIST },
-    { key: 'modified', label: 'Modified', list: lists.modified ?? EMPTY_LIST },
+    { key: 'modified', label: 'Not resynced', list: lists.modified ?? EMPTY_LIST },
     { key: 'webkitExtra', label: 'WebKit only', list: lists.webkitExtra ?? EMPTY_LIST },
   ] as const;
 

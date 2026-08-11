@@ -41,7 +41,7 @@ export const BUCKET_ORDER: Bucket[] = ['identical', 'renamed', 'modified', 'miss
 export const BUCKET_LABELS: Record<Bucket, string> = {
   identical: 'Identical',
   renamed: 'Renamed',
-  modified: 'Modified',
+  modified: 'Not resynced',
   missing: 'Missing',
   notImported: 'Not imported',
 };
@@ -49,7 +49,8 @@ export const BUCKET_LABELS: Record<Bucket, string> = {
 export const BUCKET_DESCRIPTIONS: Record<Bucket, string> = {
   identical: 'Byte-for-byte the same file in both repositories.',
   renamed: "Same content under a different name — WebKit renames reftest references on import.",
-  modified: 'Present in both but the contents differ, from a WebKit patch or a stale copy.',
+  modified:
+    'Present in both but the contents differ — most often by a line or two, because upstream edited the file and WebKit has not resynced.',
   missing: "Upstream has this file and WebKit's copy does not.",
   notImported: 'import-expectations.json tells WebKit to skip this path.',
 };
