@@ -1,7 +1,8 @@
 {
+  "//": "The service only reads a committed snapshot from disk — it peaks around 70 MiB. The collector needs ~330 MiB, but it cannot run here (no git binary) and is run by CI instead.",
   "kind": "service",
   "start": "npm start",
   "port": 8080,
   "vcpus": 1,
-  "memMiB": 1024
+  "memMiB": 256
 }
