@@ -6,6 +6,7 @@ import {
   upstreamUrl,
   webkitUrl,
   type DirectoryChild,
+  type DirectoryDetail as DirectoryDetailData,
   type FileList,
 } from '@/lib/api';
 import type { Metric } from '@/lib/metric';
@@ -136,9 +137,19 @@ function ChildRow({
   );
 }
 
-export function DirectoryDetail({ root, metric }: { root: string; metric: Metric }) {
+const EMPTY_LIST: FileList = { total: 0, truncated: false, items: [] };
+
+export function DirectoryDetail({
+  root,
+  metric,
+  version,
+}: {
+  root: string;
+  metric: Metric;
+  version: string;
+}) {
   const [path, setPath] = useState(root);
-  const { data, error, loading } = useAsync(() => fetchDirectory(path), [path]);
+  const { data, error, loading } = useAsync(() => fetchDirectory(path, version), [path, version]);
 
   if (loading) {
     return (
@@ -157,10 +168,14 @@ export function DirectoryDetail({ root, metric }: { root: string; metric: Metric
     );
   }
 
+  // Defensive: a response cached from an older deployment can be missing `lists`.
+  // Degrade to empty rather than taking the whole page down.
+  const lists: Partial<DirectoryDetailData['lists']> = data.lists ?? {};
+  const children = data.children ?? [];
   const tabs = [
-    { key: 'missing', label: 'Missing', list: data.lists.missing },
-    { key: 'modified', label: 'Modified', list: data.lists.modified },
-    { key: 'webkitExtra', label: 'WebKit only', list: data.lists.webkitExtra },
+    { key: 'missing', label: 'Missing', list: lists.missing ?? EMPTY_LIST },
+    { key: 'modified', label: 'Modified', list: lists.modified ?? EMPTY_LIST },
+    { key: 'webkitExtra', label: 'WebKit only', list: lists.webkitExtra ?? EMPTY_LIST },
   ] as const;
 
   return (
@@ -178,14 +193,14 @@ export function DirectoryDetail({ root, metric }: { root: string; metric: Metric
         </a>
       </div>
 
-      {data.children.length > 0 && (
+      {children.length > 0 && (
         <div>
           <p className="text-muted-foreground mb-2 text-xs">
-            {formatNumber(data.children.length)} subdirector
-            {data.children.length === 1 ? 'y' : 'ies'} — counts include everything beneath each one
+            {formatNumber(children.length)} subdirector
+            {children.length === 1 ? 'y' : 'ies'} — counts include everything beneath each one
           </p>
           <div className="border-border max-h-80 divide-y divide-(--border) overflow-y-auto rounded-md border">
-            {data.children.map((child) => (
+            {children.map((child) => (
               <ChildRow key={child.path} child={child} metric={metric} onOpen={setPath} />
             ))}
           </div>

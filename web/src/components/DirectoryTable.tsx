@@ -266,7 +266,11 @@ export function DirectoryTable({ report, metric }: { report: Report; metric: Met
                 isOpen && (
                   <TableRow key={`${row.id}-detail`} className="hover:bg-transparent">
                     <TableCell colSpan={row.getVisibleCells().length} className="bg-muted/40 p-0">
-                      <DirectoryDetail root={row.original.name} metric={metric} />
+                      <DirectoryDetail
+                        root={row.original.name}
+                        metric={metric}
+                        version={report.generatedAt}
+                      />
                     </TableCell>
                   </TableRow>
                 ),

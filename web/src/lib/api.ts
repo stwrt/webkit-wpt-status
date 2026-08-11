@@ -101,9 +101,18 @@ async function getJson<T>(url: string): Promise<T> {
 
 export const fetchReport = () => getJson<Report>('/api/report');
 
-/** `dirPath` may be any depth, e.g. "css/css-grid" — slashes stay as separators. */
-export const fetchDirectory = (dirPath: string) =>
-  getJson<DirectoryDetail>(`/api/dirs/${dirPath.split('/').map(encodeURIComponent).join('/')}`);
+/**
+ * `dirPath` may be any depth, e.g. "css/css-grid" — slashes stay as separators.
+ *
+ * `version` is the snapshot's timestamp, passed only to key the HTTP cache: these
+ * responses are cached for minutes, and without it a browser holding a response
+ * from a previous deployment would replay an older payload shape against newer
+ * code. The server ignores the query string.
+ */
+export const fetchDirectory = (dirPath: string, version: string) =>
+  getJson<DirectoryDetail>(
+    `/api/dirs/${dirPath.split('/').map(encodeURIComponent).join('/')}?v=${encodeURIComponent(version)}`,
+  );
 
 const UPSTREAM_BLOB = 'https://github.com/web-platform-tests/wpt/blob/master';
 const WEBKIT_TREE =
