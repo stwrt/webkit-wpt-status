@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ExternalLink, Folder } from 'lucide-react';
+import { ChevronRight, ExternalLink, Folder, Loader2 } from 'lucide-react';
 
 import {
   fetchDirectory,
@@ -151,7 +151,9 @@ export function DirectoryDetail({
   const [path, setPath] = useState(root);
   const { data, error, loading } = useAsync(() => fetchDirectory(path, version), [path, version]);
 
-  if (loading) {
+  // Only the very first load gets a skeleton. Navigating keeps the current panel
+  // on screen until the next one is ready, so the row doesn't collapse and reflow.
+  if (loading && !data) {
     return (
       <div className="space-y-2 p-4">
         <Skeleton className="h-8 w-64" />
@@ -179,9 +181,16 @@ export function DirectoryDetail({
   ] as const;
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4" aria-busy={loading}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Breadcrumbs path={path} onNavigate={setPath} />
+        <div className="flex items-center gap-2">
+          {/* The breadcrumb follows the click immediately; the body below it swaps
+              when the data lands, so the spinner is the only thing that moves. */}
+          <Breadcrumbs path={path} onNavigate={setPath} />
+          {loading && (
+            <Loader2 className="text-muted-foreground size-3.5 animate-spin" aria-label="Loading" />
+          )}
+        </div>
         <a
           href={webkitUrl(path)}
           target="_blank"
@@ -221,7 +230,7 @@ export function DirectoryDetail({
           </TabsList>
           {/* The lists are always every file; the row above may be counting tests only. */}
           <span className="text-muted-foreground text-xs">
-            Every file under {path}/, including support files
+            Every file under {data.path}/, including support files
             {metric === 'tests' && ' — the row counts tests only'}
           </span>
         </div>
