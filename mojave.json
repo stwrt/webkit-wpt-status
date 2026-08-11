@@ -1,8 +1,8 @@
 {
-  "//": "The service only reads a committed snapshot from disk — it peaks around 70 MiB. The collector needs ~330 MiB, but it cannot run here (no git binary) and is run by CI instead.",
+  "//": "Sized with headroom rather than to the measured floor: the service idles around 70 MiB serving a snapshot from memory, but this is meant to stay comfortable for the WebKit team under load and to leave room for the ~330 MiB collector if it is ever run in-process on a host that has git.",
   "kind": "service",
   "start": "npm start",
   "port": 8080,
-  "vcpus": 1,
-  "memMiB": 256
+  "vcpus": 2,
+  "memMiB": 2048
 }
