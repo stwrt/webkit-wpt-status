@@ -1,0 +1,46 @@
+name: Refresh snapshot
+
+# The comparison needs a git binary, and the service microVM this deploys to
+# doesn't have one. So the snapshot is produced here and committed; pushing it
+# is what triggers a redeploy.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run collect
+
+      - name: Commit the snapshot if it changed
+        run: |
+          if git diff --quiet -- data; then
+            echo "No change since the last run."
+            exit 0
+          fi
+          summary=$(jq -r '.totals | "\(.syncPercent)% in sync, \(.counts.missing) missing"' data/report.json)
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "Refresh snapshot: $summary"
+          git push

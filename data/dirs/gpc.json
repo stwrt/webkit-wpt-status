@@ -1,0 +1,1 @@
+{"name":"gpc","expectation":"import","counts":{"identical":6,"renamed":0,"modified":3,"missing":0,"notImported":0},"missing":{"total":0,"truncated":false,"items":[]},"modified":{"total":3,"truncated":false,"items":["gpc/WEB_FEATURES.yml","gpc/support/getGPC.py","gpc/support/navigator-globalPrivacyControl.html"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

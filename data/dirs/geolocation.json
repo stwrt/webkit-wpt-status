@@ -1,0 +1,1 @@
+{"name":"geolocation","expectation":"import","counts":{"identical":26,"renamed":0,"modified":1,"missing":1,"notImported":0},"missing":{"total":1,"truncated":false,"items":["geolocation/getCurrentPosition-accuracyMode.https.html"]},"modified":{"total":1,"truncated":false,"items":["geolocation/WEB_FEATURES.yml"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

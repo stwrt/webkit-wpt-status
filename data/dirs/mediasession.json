@@ -1,0 +1,1 @@
+{"name":"mediasession","expectation":"import","counts":{"identical":13,"renamed":0,"modified":1,"missing":0,"notImported":0},"missing":{"total":0,"truncated":false,"items":[]},"modified":{"total":1,"truncated":false,"items":["mediasession/WEB_FEATURES.yml"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

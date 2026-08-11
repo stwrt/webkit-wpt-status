@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fork } from 'node:child_process';
+import { execFile, fork } from 'node:child_process';
 
 import { rootDir } from '../collect/config.js';
 import { Store } from './store.js';
@@ -136,6 +136,18 @@ async function handle(req, res) {
 
 let collecting = false;
 
+/**
+ * The collector shells out to git. Some hosts (mojave's service microVMs among
+ * them) ship a bare Node runtime with no git binary, in which case refreshing is
+ * impossible and the snapshot committed to the repo is what gets served. Check
+ * once at boot rather than failing on a schedule forever.
+ */
+function hasGit() {
+  return new Promise((resolve) => {
+    execFile('git', ['--version'], (error) => resolve(!error));
+  });
+}
+
 async function refresh(reason) {
   if (collecting) return;
   collecting = true;
@@ -183,9 +195,13 @@ async function main() {
 
   server.listen(PORT, HOST, () => log(`listening on http://${HOST}:${PORT}`));
 
-  if (COLLECT_ON_START || !store.report) refresh('startup');
-  if (REFRESH_INTERVAL_HOURS > 0) {
-    setInterval(() => refresh('scheduled'), REFRESH_INTERVAL_HOURS * 3600_000).unref();
+  if (await hasGit()) {
+    if (COLLECT_ON_START || !store.report) refresh('startup');
+    if (REFRESH_INTERVAL_HOURS > 0) {
+      setInterval(() => refresh('scheduled'), REFRESH_INTERVAL_HOURS * 3600_000).unref();
+    }
+  } else {
+    log('git is unavailable, so refreshing is disabled; serving the committed snapshot');
   }
 
   for (const signal of ['SIGINT', 'SIGTERM']) {

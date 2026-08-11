@@ -68,7 +68,23 @@ npm test            # unit tests for expectation resolution and bucketing
 | `COLLECT_ON_START` | unset | Set to `1` to collect immediately on boot. |
 
 A refresh runs the collector in a child process and only swaps in the new snapshot once it loads
-cleanly, so a failed collection keeps serving the last good data.
+cleanly, so a failed collection keeps serving the last good data. If the host has no `git` binary
+the server says so once at boot and skips refreshing entirely — see below.
+
+## Deployment
+
+Deployed to [mojave](https://mojave.sh) as a service (`mojave.json`), which runs `npm start` on a
+1 vCPU / 1024 MiB microVM. The collector peaks around 330 MB, which is why the default 256 MiB
+isn't enough.
+
+That microVM has **no `git` binary**, so the app cannot collect where it runs. Instead
+`.github/workflows/refresh.yml` runs the collector daily on GitHub Actions and commits `data/`,
+and mojave's push webhook redeploys. `data/` is therefore committed on purpose — it's the served
+snapshot, not build output. `npm run build` still attempts a collection first (`collect:soft`) so
+a build somewhere that *does* have git picks up fresher data; a failure there is logged and
+ignored.
+
+To refresh on demand: `gh workflow run refresh.yml`, or run `npm run collect` locally and commit.
 
 ## Layout
 

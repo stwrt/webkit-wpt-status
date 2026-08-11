@@ -1,0 +1,1 @@
+{"name":"cookiestore","expectation":"import","counts":{"identical":63,"renamed":0,"modified":2,"missing":0,"notImported":0},"missing":{"total":0,"truncated":false,"items":[]},"modified":{"total":2,"truncated":false,"items":["cookiestore/WEB_FEATURES.yml","cookiestore/serviceworker_cookieStore_cross_origin.js"]},"webkitExtra":{"total":0,"truncated":false,"items":[]}}

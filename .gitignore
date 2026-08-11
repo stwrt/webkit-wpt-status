@@ -1,6 +1,8 @@
 node_modules/
 .cache/
-data/
 web/dist/
+
+# data/ is committed on purpose: the deploy target has no git binary, so the
+# snapshot refreshed by .github/workflows/refresh.yml is what gets served.
 *.log
 .DS_Store
