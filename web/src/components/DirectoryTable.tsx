@@ -41,6 +41,8 @@ interface Row {
   scope: number;
   coverage: number | null;
   webkitExtra: number;
+  /** True when this directory holds nothing the current metric can count. */
+  isEmpty: boolean;
 }
 
 const EXPECTATION_LABELS: Record<string, string> = {
@@ -157,19 +159,42 @@ export function DirectoryTable({ report, metric }: { report: Report; metric: Met
   const [sorting, setSorting] = useState<SortingState>([{ id: 'missing', desc: true }]);
   const [filter, setFilter] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showEmpty, setShowEmpty] = useState(false);
 
-  const data = useMemo<Row[]>(
+  const allRows = useMemo<Row[]>(
     () =>
-      report.directories.map((directory) => ({
-        name: directory.name,
-        expectation: directory.expectation,
-        counts: metricCounts(directory, metric),
-        scope: metricScope(directory, metric),
-        coverage: metricCoverage(directory, metric),
-        webkitExtra: directory.webkitExtra,
-      })),
+      report.directories.map((directory) => {
+        const counts = metricCounts(directory, metric);
+        return {
+          name: directory.name,
+          expectation: directory.expectation,
+          counts,
+          scope: metricScope(directory, metric),
+          coverage: metricCoverage(directory, metric),
+          webkitExtra: directory.webkitExtra,
+          // Nothing to say in this metric: no test of any kind lives here. Upstream
+          // holds a few of these — infrastructure (.github), shared support (common,
+          // resources, fonts), vendored code (third_party, all of test262), and
+          // webgpu, whose CTS is generated in from gpuweb/cts rather than committed.
+          // They carry real numbers under "All files", so hide rather than drop them.
+          isEmpty:
+            metricScope(directory, metric) === 0 &&
+            counts.notImported === 0 &&
+            directory.webkitExtra === 0,
+        };
+      }),
     [report, metric],
   );
+
+  // An explicit search should always be able to find a row, so hiding only applies
+  // to the unfiltered view.
+  const searching = filter.trim().length > 0;
+  const hidingEmpty = !showEmpty && !searching;
+  const data = useMemo(
+    () => (hidingEmpty ? allRows.filter((row) => !row.isEmpty) : allRows),
+    [allRows, hidingEmpty],
+  );
+  const hiddenCount = allRows.length - data.length;
 
   const table = useReactTable({
     data,
@@ -202,6 +227,30 @@ export function DirectoryTable({ report, metric }: { report: Report; metric: Met
         <p className="text-muted-foreground text-sm">
           {formatNumber(rows.length)} of {formatNumber(report.directories.length)} top-level
           directories
+          {hiddenCount > 0 && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                onClick={() => setShowEmpty(true)}
+                className="hover:text-foreground underline underline-offset-4"
+              >
+                {formatNumber(hiddenCount)} with no {metric === 'tests' ? 'tests' : 'files'} hidden
+              </button>
+            </>
+          )}
+          {showEmpty && !searching && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                onClick={() => setShowEmpty(false)}
+                className="hover:text-foreground underline underline-offset-4"
+              >
+                hide empty rows
+              </button>
+            </>
+          )}
         </p>
       </div>
 
