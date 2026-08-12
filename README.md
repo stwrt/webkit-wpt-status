@@ -20,10 +20,22 @@ Each upstream file lands in one bucket:
 | Bucket | Meaning |
 | --- | --- |
 | `identical` | Same path, same blob SHA. |
-| `modified` | Same path, different contents. |
+| `modified` | Same path, different contents. Shown as **not resynced**. |
 | `renamed` | Path absent, but the same blob exists elsewhere in the directory. |
 | `missing` | Absent from WebKit entirely — the drift signal. |
 | `notImported` | `import-expectations.json` says to skip this path. |
+
+Two percentages are derived from those, and the difference between them matters:
+
+```
+coverage = (identical + renamed + modified) / (that + missing)   # WebKit has the test at all
+in sync  = (identical + renamed)           / (that + missing)   # byte-for-byte identical
+```
+
+**Coverage is what the site leads with.** In sync is the stricter number and is also shown, but
+it makes trivial drift look like a hole: every file in `compression/` differs from upstream by a
+single `// META: global=…` header line, which scores 0% in sync and 89.5% coverage. The tests are
+all there.
 
 Two details keep the numbers honest:
 
@@ -38,9 +50,14 @@ Two details keep the numbers honest:
 
 ### Known caveat
 
-WebKit *rewrites* some files as it imports them — that is what the `import-no-rewrite` expectation
-opts out of. So `modified` mixes deliberate local changes with genuinely stale copies and cannot
-distinguish them. **`missing` is the number to trust.**
+`modified` records *that* two files differ, never *how much*. Across a sample of 40 modified test
+files diffed against upstream, 73% differed by one or two lines, 10% by three to ten, and 8% by
+more than fifty. So a large "not resynced" count usually means upstream edited a header and WebKit
+has not resynced — not that the tests have diverged in substance.
+
+It also can't tell you the cause. WebKit *rewrites* some files as it imports them — that is what
+the `import-no-rewrite` expectation opts out of — so `modified` mixes deliberate local changes
+with genuinely stale copies. **`missing` is the number to trust.**
 
 ## Running it
 
