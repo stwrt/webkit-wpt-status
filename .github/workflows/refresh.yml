@@ -5,7 +5,9 @@ name: Refresh snapshot
 # is what triggers a redeploy.
 on:
   schedule:
-    - cron: '17 6 * * *'
+    # Every six hours, at :17 past — off the hour, where scheduled runs queue up
+    # worst. A pass costs about 90 seconds and commits nothing when nothing moved.
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 permissions:

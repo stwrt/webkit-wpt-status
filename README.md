@@ -95,7 +95,7 @@ Deployed to [mojave](https://mojave.sh) as a service (`mojave.json`), which runs
 isn't enough.
 
 That microVM has **no `git` binary**, so the app cannot collect where it runs. Instead
-`.github/workflows/refresh.yml` runs the collector daily on GitHub Actions and commits `data/`,
+`.github/workflows/refresh.yml` runs the collector every six hours on GitHub Actions and commits `data/`,
 and mojave's push webhook redeploys. `data/` is therefore committed on purpose — it's the served
 snapshot, not build output. `npm run build` still attempts a collection first (`collect:soft`) so
 a build somewhere that *does* have git picks up fresher data; a failure there is logged and
